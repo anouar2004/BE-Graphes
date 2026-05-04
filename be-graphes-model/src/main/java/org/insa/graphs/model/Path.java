@@ -68,39 +68,31 @@ public class Path {
      */
     public static Path createShortestPathFromNodes(Graph graph, List<Node> nodes)
             throws IllegalArgumentException {
-                // TODO:
-        List<Arc> arcs = new ArrayList<Arc>();
-        //dans un premier temps, on regarde si le chemin est possible
-        // on va utliser une boucle for et regarde quand on aurra 
-        for(int i = 0; i < (nodes.size() - 1); i++ ){
-            Node actualNode = nodes.get(i); // on récupere l'ément 1 
-            // on regarde si le noeud actuelle possede des chemin menant vers le noeuds suivant 
-            if(!(actualNode.hasSuccessors())){ // le noeud ne possede pas de sucesseur 
-                System.out.println("Erreur l'un des noeuds n'as pas de successeur");
-                //ajouter une erreur :/
-            }
-            else{ // on va recuperer la liste des succeseur du point actuelle 
-                List<Arc> chemin = actualNode.getSuccessors();
-                List<Arc> arcValable = new ArrayList<>(); // liste des chemin possible vers le prochian noeuds 
-                // regardons si il existe un ou plusieur chemin qui même au noed suivant de notre parcours
-                for (Arc arc : chemin) {
-                    if(arc.getDestination() == nodes.get(i + 1)){
-                        arcValable.add(arc);
-                    }
-                    float cheminMin = -1;
-                    for (Arc choix : arcValable) { //maintemant qu'on a une liste de voisin, on regarde le quelle a le plus petit 
-                            
-                        
-                    }
-
-
-                    }
-                } 
-
-
-            } 
-            return new Path(graph, arcs);
+        if (nodes == null || nodes.isEmpty()) {
+            return new Path(graph);
         }
+        if (nodes.size() == 1) {
+            return new Path(graph, nodes.get(0));
+        }
+        List<Arc> arcs = new ArrayList<>();
+        for (int i = 0; i < nodes.size() - 1; ++i) {
+            Node actualNode = nodes.get(i);
+            Node nextNode = nodes.get(i + 1);
+            Arc bestArc = null;
+            for (Arc arc : actualNode.getSuccessors()) { 
+                if (arc.getDestination().equals(nextNode)
+                        && (bestArc == null || arc.getLength() < bestArc.getLength())) {
+                    bestArc = arc;
+                }
+            }
+            if (bestArc == null) {
+                throw new IllegalArgumentException(
+                        "Il n'existe pas d'arc entre les nœuds consécutifs " + actualNode + " et " + nextNode);
+            }
+            arcs.add(bestArc);
+        }
+        return new Path(graph, arcs);
+    }
 
     /**
      * Concatenate the given paths.
