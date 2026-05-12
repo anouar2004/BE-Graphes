@@ -1,47 +1,72 @@
 package org.insa.graphs.algorithm.shortestpath;
 
-public class Label {
+import org.insa.graphs.model.Arc;
+import org.insa.graphs.model.Node;
 
-    private int sommetCourant;
-    private boolean marque;
-    private int coutRealise;
-    private int pere;
+public class Label implements Comparable<Label> {
 
-    public Label(int sommetCourant, boolean marque, int coutRealise, int pere){ 
-        this.sommetCourant = sommetCourant;
-        this.marque = marque;
-        this.coutRealise = coutRealise;
-        this.pere = pere;
+  
+    private final Node node;
+
+
+    private boolean marked;
+
+
+    private double costRealised;
+
+    private Arc previousArc;
+
+
+    public Label(Node node, boolean marked, double costRealised, Arc previousArc) {
+        this.node = node;
+        this.marked = marked;
+        this.costRealised = costRealised;
+        this.previousArc = previousArc;
     }
 
-    public int getSommetCourant(){
-        return this.sommetCourant;
+    public Node getNode() {
+        return this.node;
     }
 
-    public boolean getMarque(){
-        return this.marque;
+
+    public int getNodeId() {
+        return this.node.getId();
     }
 
-    public int getCoutRealise(){
-        return this.coutRealise;
-    }
-    
-    public int getpere(){
-        return this.pere;
+    public boolean isMarked() {
+        return this.marked;
     }
 
-    public int getCost(){  //Pour le moent il retourne juste le cout réel maiss va être modfier plus tard
-        return this.coutRealise;
+    public void setMarked(boolean marked) {
+        this.marked = marked;
     }
 
-    // associé à chauqe noeud son label
-     
-    
+    public double getCostRealised() {
+        return this.costRealised;
+    }
 
 
+    public void setCostRealised(double costRealised) {
+        this.costRealised = costRealised;
+    }
 
-    
+    public Arc getPreviousArc() {
+        return this.previousArc;
+    }
 
-    //attention à la tradition des majuscule pour les classes et les minuscules pour les variables et les méthodes
-    
+
+    public void setPreviousArc(Arc previousArc) {
+        this.previousArc = previousArc;
+    }
+
+
+    public double getCost() {
+        return this.costRealised;
+    }
+
+
+    public int compareTo(Label other) {
+        return Double.compare(this.getCost(), other.getCost());
+    }
+
 }
