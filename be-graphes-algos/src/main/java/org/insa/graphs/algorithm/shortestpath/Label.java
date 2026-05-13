@@ -2,20 +2,16 @@ package org.insa.graphs.algorithm.shortestpath;
 
 import org.insa.graphs.model.Arc;
 import org.insa.graphs.model.Node;
+import org.insa.graphs.model.Graph;
+
+
 
 public class Label implements Comparable<Label> {
-
   
     private final Node node;
-
-
     private boolean marked;
-
-
     private double costRealised;
-
     private Arc previousArc;
-
 
     public Label(Node node, boolean marked, double costRealised, Arc previousArc) {
         this.node = node;
@@ -68,5 +64,14 @@ public class Label implements Comparable<Label> {
     public int compareTo(Label other) {
         return Double.compare(this.getCost(), other.getCost());
     }
+
+    public static Label[] createLabel(Graph graph){
+        Label[] array = new Label[graph.size()];
+        for(int i = 0; i < graph.size(); i++){
+            array[i] = new Label(graph.get(i), false, Double.POSITIVE_INFINITY, null);
+        }
+        return array;
+    }
+
 
 }
