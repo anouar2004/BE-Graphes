@@ -31,7 +31,7 @@ SommetDepart[N]
 SommetDepart[0]
 SommetAdmissible < - liste vide  //List des somment admissible 
 SommetArriver = NULL
-SommetUsed <- Ensemble vide //Sommet deja utilser dans le chemin
+SommetUsed <- Ensemble vide
 esp = L/(N * 10)
 tol = esp/2
 Rayon = L/N - esp
@@ -41,6 +41,8 @@ solution = NULL
 pour i allant de 0 à N-1 : 
     // On regarde si on trouve des somment admissible sur le Rayon 
     SommetAdmissible <- SommetRayon(SommetDepart[i],S0, Rayon, tol,i,graphe)
+    Si SommeAdmissible est vide 
+        renvoyer une erreur
     // On choisi le prochain sommet intermediaire 
     Si( i = 0 )
         index = nombre aléatoire entre 0 et N-1
@@ -65,15 +67,15 @@ entrée :
 - Graphe 
 sortie : 
 - SommetAdmissible la liste des sorite admissible
-Si tol < Rayon 
+Si tol > Rayon 
     renvoyer SommetAdmissible
 ListSommet <- liste vide 
 Tol = tolerance
 pour chaque sommet S dans le Graphe 
     distSc = distance(Sc, S)
     distS0 = distance(S0, S)
-    Si (dis >= Rayon - Tol et dis <= Rayon + Tol)
-        Si (dis >= Rayon - Tol et dis <= Rayon + Tol et i != 0)
+    Si (disSC >= Rayon - Tol et disSc <= Rayon + Tol)
+        Si (disS0 >= Rayon - Tol et disS0 <= Rayon + Tol et i != 0)
             ajouter S à SommetAdmissible  
         sinon
             ajouter S à SommetAdmissible
