@@ -101,12 +101,6 @@ public class DijkstraAlgorithm extends ShortestPathAlgorithm {
         // On crée la solution finale
         solution = new ShortestPathSolution(data, Status.OPTIMAL, new Path(data.getGraph(), arcs));
     }
-
-   
-       
-
-        
-
         // TODO: implement the Dijkstra algorithm
 
         // when the algorithm terminates, return the solution that has been found
