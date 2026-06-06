@@ -49,6 +49,7 @@ public class AStarAlgorithm extends DijkstraAlgorithm {
             }
             // On marque le nœud comme "visité définitivement"
             current.setMarque(true);
+            notifyNodeMarked(current.getCourantSommet());
             // Si on a atteint la destination, on peut s'arrêter
             if (current.getCourantSommet().equals(data.getDestination())) {
                 notifyDestinationReached(current.getCourantSommet());

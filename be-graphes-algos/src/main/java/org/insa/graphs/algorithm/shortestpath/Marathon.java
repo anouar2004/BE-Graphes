@@ -4,221 +4,241 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
+import org.insa.graphs.algorithm.ArcInspector;
+import org.insa.graphs.algorithm.ArcInspectorFactory;
 import org.insa.graphs.model.Arc;
 import org.insa.graphs.model.Graph;
 import org.insa.graphs.model.Node;
 import org.insa.graphs.model.Path;
 import org.insa.graphs.model.Point;
 
-
 public class Marathon {
 
-    private static final int N = 4;
+    // ---------------------------------------------------------------
+    // Paramètres
+    // ---------------------------------------------------------------
 
-    private static final double ESP_FACTOR = 0.10;
+    private static final int    N             = 4;
 
-    public static Path dorun(Graph graph, Node origin, double L) {
+    // Facteur de tortuosité : le chemin routier est ~1.3x le vol d'oiseau
+    private static final double ALPHA         = 1.3;
 
-        Node[] sommetsDepart = new Node[N + 1];
-        sommetsDepart[0] = origin;
+    // Tolérance initiale sur le rayon vol d'oiseau (±15%)
+    private static final double TOL_INIT_RATIO = 0.15;
 
-        double rayon  = L / N;          // distance idéale vol-d'oiseau entre 2 sommets consécutifs
-        double esp    = rayon * ESP_FACTOR;
-        double tol    = esp / 2.0;
+    // Tolérance acceptable sur la longueur ROUTIÈRE d'un segment (±5%)
+    // Un segment est "bon" si sa longueur est dans [(L/N)*(1-SEG_TOL), (L/N)*(1+SEG_TOL)]
+    private static final double SEG_TOL       = 0.05;
 
-        HashSet<Arc> arcsInterdits = new HashSet<>();
+    // Nombre max de candidats à tester pour trouver un bon segment
+    private static final int    MAX_CANDIDATS = 10;
 
-        Path[] segments = new Path[N + 1]; // N segments + retour
-
-        Random rng = new Random();
-
-        for (int i = 0; i < N; i++) {
-
-            List<Node> admissibles = sommetsRayon(
-                    graph, sommetsDepart[i], origin, rayon, tol, i);
-
-            if (admissibles.isEmpty()) {
-                System.err.println("[Marathon] Aucun sommet admissible à l'étape " + i);
-                return null;
-            }
-            if (i == 0) {
-                int idx = rng.nextInt(admissibles.size());
-                sommetsDepart[i + 1] = admissibles.get(idx);
-            } else {
-                Node precedent = sommetsDepart[i - 1];
-                Node choisi = null;
-                for (Node s : admissibles) {
-                    if (!s.equals(precedent)) {
-                        choisi = s;
-                        break;
-                    }
-                }
-                if (choisi == null) {
-                    choisi = admissibles.get(0);
-                }
-                sommetsDepart[i + 1] = choisi;
-            }
-
-            Path seg = aStarInterdit(graph, sommetsDepart[i], sommetsDepart[i + 1], arcsInterdits);
-            if (seg == null || seg.isEmpty()) {
-                System.err.println("[Marathon] A* infaisable sur le segment " + i);
-                return null;
-            }
-            segments[i] = seg;
-            arcsInterdits.addAll(seg.getArcs());
-        }
-
-        Path retour = aStarInterdit(graph, sommetsDepart[N], origin, arcsInterdits);
-        if (retour == null || retour.isEmpty()) {
-            System.err.println("[Marathon] A* infaisable pour le retour à l'origine");
-            return null;
-        }
-        segments[N] = retour;
-        arcsInterdits.addAll(retour.getArcs());
-
-        try {
-            ArrayList<Arc> tousLesArcs = new ArrayList<>();
-            for (Path seg : segments) {
-                tousLesArcs.addAll(seg.getArcs());
-            }
-            Path boucle = new Path(graph, tousLesArcs);
-            double longueur = boucle.getLength();
-            System.out.printf("[Marathon] Boucle trouvée : %.2f km (cible %.2f km, écart %.2f%%)%n",
-                    longueur / 1000.0, L / 1000.0, Math.abs(longueur - L) / L * 100.0);
-            return boucle;
-        } catch (Exception e) {
-            System.err.println("[Marathon] Erreur lors de la concaténation : " + e.getMessage());
-            return null;
-        }
-    }
-
-    private static List<Node> sommetsRayon(Graph graph, Node Sc, Node S0,
-            double rayon, double tol, int i) {
-
-        // Cas d'arrêt : tolérance trop grande
-        if (tol >= rayon) {
+    // ---------------------------------------------------------------
+    // sommetRayon
+    // ---------------------------------------------------------------
+    private static List<Node> sommetRayon(Node sc, Node s0,
+                                          double rayon, double tol,
+                                          Graph graphe) {
+        if (tol > rayon) {
             return new ArrayList<>();
         }
 
-        Point pSc = Sc.getPoint();
-        Point pS0 = S0.getPoint();
-
         List<Node> admissibles = new ArrayList<>();
+        for (Node s : graphe.getNodes()) {
+            double distSc = Point.distance(sc.getPoint(), s.getPoint());
+            double distS0 = Point.distance(s0.getPoint(), s.getPoint());
 
-        for (Node s : graph.getNodes()) {
-            if (s.equals(Sc) || s.equals(S0)) {
-                continue;
+            if (distSc >= rayon - tol && distSc <= rayon + tol
+             && distS0 >= rayon - tol && distS0 <= rayon + tol) {
+                admissibles.add(s);
             }
-            double distSc = pSc.distanceTo(s.getPoint());
-
-            // Le sommet doit être dans l'anneau autour de Sc
-            if (distSc < rayon - tol || distSc > rayon + tol) {
-                continue;
-            }
-
-            if (i != 0) {
-                double distS0 = pS0.distanceTo(s.getPoint());
-                if (distS0 < rayon - tol) {
-                    continue;
-                }
-            }
-
-            admissibles.add(s);
         }
 
         if (admissibles.isEmpty()) {
-            // On élargit la tolérance et on réessaie
-            return sommetsRayon(graph, Sc, S0, rayon, tol * 2.0, i);
+            return sommetRayon(sc, s0, rayon, tol * 2, graphe);
         }
-
         return admissibles;
     }
 
-    private static Path aStarInterdit(Graph graph, Node origine, Node destination,
-            HashSet<Arc> arcsInterdits) {
+    // ---------------------------------------------------------------
+    // runAStar — retourne null si infaisable
+    // ---------------------------------------------------------------
+    private static Path runAStar(Node origin, Node destination,
+                                 Set<Arc> arcsInterdits, Graph graphe) {
 
-        int nbNodes = graph.size();
+        ArcInspector base = ArcInspectorFactory.getAllFilters().get(0);
 
-        // Initialisation des labels A* (LabelStar avec heuristique euclidienne)
-        LabelStar[] labels = new LabelStar[nbNodes];
-        for (int idx = 0; idx < nbNodes; idx++) {
-            double h = destination.getPoint().distanceTo(graph.get(idx).getPoint());
-            labels[idx] = new LabelStar(graph.get(idx), h);
+        ArcInspector inspector = new ArcInspector() {
+            @Override public boolean isAllowed(Arc arc) {
+                return base.isAllowed(arc) && !arcsInterdits.contains(arc);
+            }
+            @Override public double getCost(Arc arc) { return arc.getLength(); }
+            @Override public int getMaximumSpeed()   { return base.getMaximumSpeed(); }
+            @Override public org.insa.graphs.algorithm.AbstractInputData.Mode getMode() {
+                return base.getMode();
+            }
+        };
+
+        ShortestPathSolution sol = new AStarAlgorithm(
+                new ShortestPathData(graphe, origin, destination, inspector)).run();
+
+        return sol.isFeasible() ? sol.getPath() : null;
+    }
+
+    // ---------------------------------------------------------------
+    // choisirMeilleurSegment
+    //
+    // Parmi les candidats, on lance A* sur les MAX_CANDIDATS premiers
+    // et on retourne celui dont la longueur routière est la plus proche
+    // de la cible segCible, en évitant de revenir sur precedent.
+    // ---------------------------------------------------------------
+    private static Path[] choisirMeilleurSegment(
+            Node sc, List<Node> candidats, Node precedent,
+            double segCible, Set<Arc> arcsInterdits, Graph graphe) {
+
+        Path meilleurPath = null;
+        Node meilleurNoeud = null;
+        double meilleurEcart = Double.MAX_VALUE;
+
+        // On mélange légèrement pour ne pas toujours prendre les mêmes
+        List<Node> sousListe = new ArrayList<>();
+        for (Node n : candidats) {
+            if (!n.equals(precedent)) sousListe.add(n);
+            if (sousListe.size() >= MAX_CANDIDATS) break;
+        }
+        // Si tous les candidats sont le précédent, on les accepte quand même
+        if (sousListe.isEmpty()) {
+            sousListe.addAll(candidats.subList(0, Math.min(MAX_CANDIDATS, candidats.size())));
         }
 
-        // Tas binaire
-        org.insa.graphs.algorithm.utils.BinaryHeap<Label> heap =
-                new org.insa.graphs.algorithm.utils.BinaryHeap<>();
+        for (Node candidat : sousListe) {
+            Path seg = runAStar(sc, candidat, arcsInterdits, graphe);
+            if (seg == null) continue;
 
-        // Initialisation de l'origine
-        labels[origine.getId()].setCostRealised(0);
-        heap.insert(labels[origine.getId()]);
+            double ecart = Math.abs(seg.getLength() - segCible);
+            System.out.printf("[Marathon]     candidat #%d : %.0f m (écart %.0f m)%n",
+                    candidat.getId(), seg.getLength(), ecart);
 
-        boolean found = false;
-
-        // Boucle A*
-        while (!heap.isEmpty()) {
-            Label current;
-            try {
-                current = heap.deleteMin();
-            } catch (Exception e) {
-                break;
+            if (ecart < meilleurEcart) {
+                meilleurEcart = ecart;
+                meilleurPath  = seg;
+                meilleurNoeud = candidat;
             }
 
-            if (current.isMarque()) {
-                continue;
+            // Si on est dans la tolérance, on s'arrête
+            if (ecart <= segCible * SEG_TOL) break;
+        }
+
+        if (meilleurPath == null) return null;
+        return new Path[]{ meilleurPath, null };  // [0]=path, [1] non utilisé
+        // on retourne aussi le nœud via un tableau de Node séparé
+    }
+
+    // ---------------------------------------------------------------
+    // dorun — algorithme principal
+    // ---------------------------------------------------------------
+    public static Path dorun(Graph graphe, Node s0, double L) {
+
+        double rayon    = (L / N) / ALPHA;
+        double tol      = rayon * TOL_INIT_RATIO;
+        double segCible = L / N;   // longueur routière cible par segment
+
+        System.out.printf("[Marathon] L=%.0fm  N=%d  segCible=%.0fm  rayon=%.0fm%n",
+                L, N, segCible, rayon);
+
+        Node[]    sommetsDepart  = new Node[N + 1];
+        sommetsDepart[0]         = s0;
+        Set<Arc>  arcsInterdits  = new HashSet<>();
+        List<Arc> tousLesArcs    = new ArrayList<>();
+        Random    rand           = new Random();
+
+        for (int i = 0; i < N; i++) {
+
+            List<Node> admissibles = sommetRayon(
+                    sommetsDepart[i], s0, rayon, tol, graphe);
+
+            if (admissibles.isEmpty()) {
+                System.err.println("[Marathon] INFEASIBLE : aucun sommet admissible étape " + i);
+                return null;
             }
-            current.setMarque(true);
 
-            if (current.getCourantSommet().equals(destination)) {
-                found = true;
-                break;
+            System.out.printf("[Marathon] étape %d : %d candidats géographiques%n",
+                    i, admissibles.size());
+
+            // Pour le premier segment : on choisit parmi des candidats aléatoires
+            // pour ne pas toujours faire la même boucle
+            if (i == 0) {
+                // Mélange partiel : on décale aléatoirement le point de départ dans la liste
+                int offset = rand.nextInt(admissibles.size());
+                List<Node> shuffled = new ArrayList<>();
+                for (int k = 0; k < admissibles.size(); k++) {
+                    shuffled.add(admissibles.get((k + offset) % admissibles.size()));
+                }
+                admissibles = shuffled;
             }
 
-            for (Arc arc : current.getCourantSommet().getSuccessors()) {
+            // Trouver le candidat dont la longueur routière est la plus proche de segCible
+            Node meilleurNoeud = null;
+            Path meilleurSeg   = null;
+            double meilleurEcart = Double.MAX_VALUE;
 
-                // On ignore les arcs interdits
-                if (arcsInterdits.contains(arc)) {
-                    continue;
+            Node precedent = (i > 0) ? sommetsDepart[i - 1] : null;
+
+            List<Node> aTester = new ArrayList<>();
+            for (Node n : admissibles) {
+                if (!n.equals(precedent)) aTester.add(n);
+                if (aTester.size() >= MAX_CANDIDATS) break;
+            }
+            if (aTester.isEmpty()) aTester = admissibles.subList(
+                    0, Math.min(MAX_CANDIDATS, admissibles.size()));
+
+            for (Node candidat : aTester) {
+                Path seg = runAStar(sommetsDepart[i], candidat, arcsInterdits, graphe);
+                if (seg == null) continue;
+
+                double ecart = Math.abs(seg.getLength() - segCible);
+                System.out.printf("[Marathon]   candidat #%d : %.0f m (écart %.0f m)%n",
+                        candidat.getId(), seg.getLength(), ecart);
+
+                if (ecart < meilleurEcart) {
+                    meilleurEcart = ecart;
+                    meilleurSeg   = seg;
+                    meilleurNoeud = candidat;
                 }
 
-                LabelStar dest = labels[arc.getDestination().getId()];
-                if (!dest.isMarque()) {
-                    double newCost = current.getCostRealised() + arc.getLength();
-                    if (newCost < dest.getCostRealised()) {
-                        if (dest.getCostRealised() == Double.POSITIVE_INFINITY) {
-                            // premier passage
-                        }
-                        try {
-                            heap.remove(dest);
-                        } catch (org.insa.graphs.algorithm.utils.ElementNotFoundException e) {
-                            // pas encore dans le tas, normal
-                        }
-                        dest.setCostRealised(newCost);
-                        dest.setPere(arc);
-                        heap.insert(dest);
-                    }
-                }
+                if (ecart <= segCible * SEG_TOL) break;  // assez bon, on s'arrête
             }
+
+            if (meilleurSeg == null) {
+                System.err.println("[Marathon] INFEASIBLE : aucun segment valide étape " + i);
+                return null;
+            }
+
+            System.out.printf("[Marathon]   → segment %d choisi : %.0f m (écart %.1f%%)%n",
+                    i, meilleurSeg.getLength(),
+                    meilleurEcart / segCible * 100.0);
+
+            sommetsDepart[i + 1] = meilleurNoeud;
+            arcsInterdits.addAll(meilleurSeg.getArcs());
+            tousLesArcs.addAll(meilleurSeg.getArcs());
         }
 
-        if (!found && labels[destination.getId()].getPere() == null) {
+        // Segment de retour
+        Path retour = runAStar(sommetsDepart[N - 1], s0, arcsInterdits, graphe);
+        if (retour == null) {
+            System.err.println("[Marathon] INFEASIBLE : A* échoue segment retour");
             return null;
         }
+        System.out.printf("[Marathon]   retour : %.0f m%n", retour.getLength());
+        tousLesArcs.addAll(retour.getArcs());
 
-        ArrayList<Arc> arcs = new ArrayList<>();
-        Label cur = labels[destination.getId()];
-        while (cur.getPere() != null) {
-            arcs.add(cur.getPere());
-            cur = labels[cur.getPere().getOrigin().getId()];
-        }
-        java.util.Collections.reverse(arcs);
+        Path boucle   = new Path(graphe, tousLesArcs);
+        double longueur = boucle.getLength();
+        System.out.printf("[Marathon] Boucle : %.2f km (cible %.2f km, écart %.1f%%)%n",
+                longueur / 1000.0, L / 1000.0, Math.abs(longueur - L) / L * 100.0);
 
-        if (arcs.isEmpty()) {
-            return null;
-        }
-
-        return new Path(graph, arcs);
+        return boucle;
     }
 }

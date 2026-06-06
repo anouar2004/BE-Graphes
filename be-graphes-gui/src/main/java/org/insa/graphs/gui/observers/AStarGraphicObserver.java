@@ -16,7 +16,7 @@ public class AStarGraphicObserver extends ShortestPathGraphicObserver {
         // On appelle le constructeur parent pour initialiser drawing,
         // puis on remplace les deux overlays par les couleurs A*.
         super(drawing);
-        psOverlay1 = drawing.createPointSetOverlay(1, Color.ORANGE);
+        psOverlay1 = drawing.createPointSetOverlay(1, Color.BLUE);
         psOverlay2 = drawing.createPointSetOverlay(1, Color.RED);
     }
 }

@@ -48,6 +48,7 @@ public class DijkstraAlgorithm extends ShortestPathAlgorithm {
         }
         // On marque le nœud comme "visité définitivement"
         current.setMarque(true);
+        notifyNodeMarked(current.getCourantSommet());
         // Si on a atteint la destination, on peut s'arrêter
         if (current.getCourantSommet().equals(data.getDestination())) {
             notifyDestinationReached(current.getCourantSommet());
@@ -101,6 +102,12 @@ public class DijkstraAlgorithm extends ShortestPathAlgorithm {
         // On crée la solution finale
         solution = new ShortestPathSolution(data, Status.OPTIMAL, new Path(data.getGraph(), arcs));
     }
+
+   
+       
+
+        
+
         // TODO: implement the Dijkstra algorithm
 
         // when the algorithm terminates, return the solution that has been found
