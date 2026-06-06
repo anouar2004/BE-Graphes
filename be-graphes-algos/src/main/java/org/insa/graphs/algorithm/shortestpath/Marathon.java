@@ -18,7 +18,7 @@ public class Marathon {
 
     private static final double ESP_FACTOR = 0.10;
 
-    public static Path compute(Graph graph, Node origin, double L) {
+    public static Path dorun(Graph graph, Node origin, double L) {
 
         Node[] sommetsDepart = new Node[N + 1];
         sommetsDepart[0] = origin;

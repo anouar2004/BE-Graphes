@@ -1,5 +1,5 @@
 package org.insa.graphs.gui.drawing.components;
-
+ 
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
@@ -17,9 +17,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+ 
 import javax.swing.JPanel;
-
+ 
 import org.insa.graphs.gui.drawing.BasicGraphPalette;
 import org.insa.graphs.gui.drawing.Drawing;
 import org.insa.graphs.gui.drawing.DrawingClickListener;
@@ -38,61 +38,61 @@ import org.insa.graphs.model.Node;
 import org.insa.graphs.model.Path;
 import org.insa.graphs.model.Point;
 import org.insa.graphs.model.GraphStatistics.BoundingBox;
-
+ 
 /**
  *
  */
 public class BasicDrawing extends JPanel implements Drawing {
-
+ 
     /**
      *
      */
     private static final long serialVersionUID = 96779785877771827L;
-
+ 
     private abstract class BasicOverlay implements Overlay {
-
+ 
         // Visible?
         protected boolean visible;
-
+ 
         // Color
         protected Color color;
-
+ 
         public BasicOverlay(Color color) {
             this.visible = true;
             this.color = color;
         }
-
+ 
         /**
          * @return The Z level of this overlay (>= 1).
          */
         public abstract int getZLevel();
-
+ 
         @Override
         public void setColor(Color color) {
             this.color = color;
         }
-
+ 
         @Override
         public Color getColor() {
             return this.color;
         }
-
+ 
         @Override
         public void setVisible(boolean visible) {
             this.visible = visible;
             BasicDrawing.this.repaint();
         }
-
+ 
         @Override
         public boolean isVisible() {
             return this.visible;
         }
-
+ 
         @Override
         public void delete() {
             BasicDrawing.this.overlays.remove(this);
         }
-
+ 
         /**
          * Draw the given overlay.
          */
@@ -101,30 +101,30 @@ public class BasicDrawing extends JPanel implements Drawing {
                 drawImpl(g);
             }
         }
-
+ 
         public abstract void drawImpl(Graphics2D g);
-
+ 
         public void redraw() {
             BasicDrawing.this.repaint();
         }
-
+ 
     };
-
+ 
     private class BasicMarkerOverlay extends BasicOverlay implements MarkerOverlay {
-
+ 
         // Marker width and height
         public static final int MARKER_WIDTH = 30, MARKER_HEIGHT = 60;
-
+ 
         // Point of the marker.
         private Point point;
-
+ 
         // Image to draw
         private Image image;
-
+ 
         // Inner color and fill mode.
         private Color innerColor;
         private final AlphaMode alphaMode;
-
+ 
         public BasicMarkerOverlay(Point point, Color color, Color inner,
                 AlphaMode alphaMode) {
             super(color);
@@ -133,16 +133,16 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.innerColor = inner;
             this.alphaMode = alphaMode;
         }
-
+ 
         public int getZLevel() {
             return 3;
         }
-
+ 
         @Override
         public Point getPoint() {
             return point;
         }
-
+ 
         @Override
         public void setColor(Color color) {
             this.innerColor = this.innerColor.equals(this.color) ? color : innerColor;
@@ -150,33 +150,33 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.image =
                     MarkerUtils.getMarkerForColor(color, this.innerColor, alphaMode);
         }
-
+ 
         @Override
         public void moveTo(Point point) {
             this.point = point;
             BasicDrawing.this.repaint();
         }
-
+ 
         @Override
         public void drawImpl(Graphics2D graphics) {
-
+ 
             int px = projection.longitudeToPixelX(getPoint().getLongitude());
             int py = projection.latitudeToPixelY(getPoint().getLatitude());
-
+ 
             graphics.drawImage(this.image, px - MARKER_WIDTH / 2, py - MARKER_HEIGHT,
                     MARKER_WIDTH, MARKER_HEIGHT, BasicDrawing.this);
         }
-
+ 
     };
-
+ 
     private class BasicPathOverlay extends BasicOverlay implements PathOverlay {
-
+ 
         // List of points
         private final List<Point> points;
-
+ 
         // Origin / Destination markers.
         private BasicMarkerOverlay origin, destination;
-
+ 
         public BasicPathOverlay(List<Point> points, Color color,
                 BasicMarkerOverlay origin, BasicMarkerOverlay destination) {
             super(color);
@@ -185,44 +185,44 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.destination = destination;
             this.color = color;
         }
-
+ 
         public int getZLevel() {
             return 2;
         }
-
+ 
         @Override
         public void setColor(Color color) {
             super.setColor(color);
             this.origin.setColor(color);
             this.destination.setColor(color);
         }
-
+ 
         @Override
         public void drawImpl(Graphics2D graphics) {
-
+ 
             if (!points.isEmpty()) {
-
+ 
                 graphics.setStroke(new BasicStroke(2));
                 graphics.setColor(getColor());
-
+ 
                 Iterator<Point> itPoint = points.iterator();
                 Point prev = itPoint.next();
-
+ 
                 while (itPoint.hasNext()) {
                     Point curr = itPoint.next();
-
+ 
                     int x1 = projection.longitudeToPixelX(prev.getLongitude());
                     int x2 = projection.longitudeToPixelX(curr.getLongitude());
                     int y1 = projection.latitudeToPixelY(prev.getLatitude());
                     int y2 = projection.latitudeToPixelY(curr.getLatitude());
-
+ 
                     graphics.drawLine(x1, y1, x2, y2);
-
+ 
                     prev = curr;
                 }
-
+ 
             }
-
+ 
             if (this.origin != null) {
                 this.origin.draw(graphics);
             }
@@ -230,20 +230,20 @@ public class BasicDrawing extends JPanel implements Drawing {
                 this.destination.draw(graphics);
             }
         }
-
+ 
     };
-
+ 
     private class BasicPointSetOverlay extends BasicOverlay implements PointSetOverlay {
-
+ 
         // Default point width
         private static final int DEFAULT_POINT_WIDTH = 5;
-
+ 
         // Image for path / points
         private final BufferedImage image;
         private final Graphics2D graphics;
-
+ 
         private int width = DEFAULT_POINT_WIDTH;
-
+ 
         public BasicPointSetOverlay() {
             super(Color.BLACK);
             this.image = new BufferedImage(BasicDrawing.this.width,
@@ -251,28 +251,28 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.graphics = image.createGraphics();
             this.graphics.setBackground(new Color(0, 0, 0, 0));
         }
-
+ 
         public int getZLevel() {
             return 1;
         }
-
+ 
         @Override
         public void setColor(Color color) {
             super.setColor(color);
             this.graphics.setColor(color);
         }
-
+ 
         @Override
         public void setWidth(int width) {
             this.width = Math.max(2, width);
         }
-
+ 
         @Override
         public void setWidthAndColor(int width, Color color) {
             setWidth(width);
             setColor(color);
         }
-
+ 
         @Override
         public void addPoint(Point point) {
             int x = projection.longitudeToPixelX(point.getLongitude()) - this.width / 2;
@@ -280,41 +280,41 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.graphics.fillOval(x, y, this.width, this.width);
             BasicDrawing.this.repaint();
         }
-
+ 
         @Override
         public void addPoint(Point point, int width) {
             setWidth(width);
             addPoint(point);
         }
-
+ 
         @Override
         public void addPoint(Point point, Color color) {
             setColor(color);
             addPoint(point);
         }
-
+ 
         @Override
         public void addPoint(Point point, int width, Color color) {
             setWidth(width);
             setColor(color);
             addPoint(point);
         }
-
+ 
         @Override
         public void drawImpl(Graphics2D g) {
             g.drawImage(this.image, 0, 0, BasicDrawing.this);
         }
-
+ 
     }
-
+ 
     /**
      * Class encapsulating a set of overlays.
      */
     private class BasicOverlays {
-
+ 
         // List of overlays.
         private ArrayList<ArrayList<BasicOverlay>> overlays = new ArrayList<>();
-
+ 
         public synchronized void draw(Graphics2D g) {
             // Clear overlays.
             for (ArrayList<BasicOverlay> arr : this.overlays) {
@@ -323,16 +323,16 @@ public class BasicDrawing extends JPanel implements Drawing {
                 }
             }
         }
-
+ 
         public synchronized void remove(BasicOverlay overlay) {
             overlays.get(overlay.getZLevel() - 1).remove(overlay);
             BasicDrawing.this.repaint();
         }
-
+ 
         public void clear() {
             clear(true);
         }
-
+ 
         public void clear(boolean repaint) {
             // Clear overlays.
             for (ArrayList<BasicOverlay> arr : this.overlays) {
@@ -343,59 +343,59 @@ public class BasicDrawing extends JPanel implements Drawing {
                 BasicDrawing.this.repaint();
             }
         }
-
+ 
         public BasicOverlay add(BasicOverlay marker) {
             return add(marker, true);
         }
-
+ 
         public synchronized BasicOverlay add(BasicOverlay overlay, boolean repaint) {
-
+ 
             // Check if we have a level for this...
             for (int i = overlays.size(); i < overlay.getZLevel(); ++i) {
                 overlays.add(new ArrayList<>());
             }
-
+ 
             // Add overlay to the given list.
             overlays.get(overlay.getZLevel() - 1).add(overlay);
-
+ 
             // Repaint if requested.
             if (repaint) {
                 BasicDrawing.this.repaint();
             }
-
+ 
             return overlay;
         }
-
+ 
     };
-
+ 
     // Default path color.
     public static final Color DEFAULT_PATH_COLOR = new Color(66, 134, 244);
-
+ 
     // Default palette.
     public static final GraphPalette DEFAULT_PALETTE = new BasicGraphPalette();
-
+ 
     // Maximum width for the drawing (in pixels).
     private static final int MAXIMUM_DRAWING_WIDTH = 2000;
-
+ 
     private Projection projection;
-
+ 
     // Width and height of the image
     private int width, height;
-
+ 
     // Zoom controls
     private MapZoomControls zoomControls;
     private ZoomAndPanListener zoomAndPanListener;
-
+ 
     //
     private Image graphImage = null;
     private Graphics2D graphGraphics = null;
-
+ 
     // List of image for markers
     private BasicOverlays overlays = new BasicOverlays();
-
+ 
     // Mapping DrawingClickListener -> MouseEventListener
     private List<DrawingClickListener> drawingClickListeners = new ArrayList<>();
-
+ 
     /**
      * Create a new BasicDrawing.
      */
@@ -404,7 +404,7 @@ public class BasicDrawing extends JPanel implements Drawing {
         this.setBackground(new Color(245, 245, 245));
         this.zoomAndPanListener = new ZoomAndPanListener(this,
                 ZoomAndPanListener.DEFAULT_MIN_ZOOM_LEVEL, 20, 1.2);
-
+ 
         // Try...
         try {
             this.zoomControls = new MapZoomControls(this, 0,
@@ -425,9 +425,9 @@ public class BasicDrawing extends JPanel implements Drawing {
         catch (IOException e) {
             e.printStackTrace();
         }
-
+ 
         this.addMouseListener(new MouseAdapter() {
-
+ 
             @Override
             public void mouseClicked(MouseEvent evt) {
                 if (zoomControls.contains(evt.getPoint())) {
@@ -444,10 +444,10 @@ public class BasicDrawing extends JPanel implements Drawing {
                     listener.mouseClicked(lonlat);
                 }
             }
-
+ 
         });
     }
-
+ 
     @Override
     public void paintComponent(Graphics g1) {
         super.paintComponent(g1);
@@ -456,24 +456,24 @@ public class BasicDrawing extends JPanel implements Drawing {
         g.setColor(this.getBackground());
         g.fillRect(0, 0, getWidth(), getHeight());
         g.setTransform(zoomAndPanListener.getCoordTransform());
-
+ 
         if (graphImage != null) {
             // Draw graph
             g.drawImage(graphImage, 0, 0, this);
         }
-
+ 
         // Draw markers
         this.overlays.draw(g);
-
+ 
         g.setTransform(sTransform);
         if (this.zoomControls != null) {
             this.zoomControls.setZoomLevel(this.zoomAndPanListener.getZoomLevel());
             this.zoomControls.draw(g, getWidth() - this.zoomControls.getWidth() - 20,
                     this.getHeight() - this.zoomControls.getHeight() - 10, this);
         }
-
+ 
     }
-
+ 
     /*
      * (non-Javadoc)
      *
@@ -487,7 +487,7 @@ public class BasicDrawing extends JPanel implements Drawing {
         this.overlays.clear(false);
         this.repaint();
     }
-
+ 
     /*
      * (non-Javadoc)
      *
@@ -497,14 +497,14 @@ public class BasicDrawing extends JPanel implements Drawing {
     public void clearOverlays() {
         this.overlays.clear();
     }
-
+ 
     /**
      * @return The current ZoomAndPanListener associated with this drawing.
      */
     public ZoomAndPanListener getZoomAndPanListener() {
         return this.zoomAndPanListener;
     }
-
+ 
     /**
      * Return the longitude and latitude corresponding to the given position of the
      * MouseEvent.
@@ -516,17 +516,33 @@ public class BasicDrawing extends JPanel implements Drawing {
      */
     protected Point getLongitudeLatitude(MouseEvent event)
             throws NoninvertibleTransformException {
+        // Compensation HiDPI : sur les écrans Retina/HiDPI, Swing rapporte les
+        // coordonnées du MouseEvent en pixels logiques mais le buffer de dessin
+        // est en pixels physiques. On récupère le scale du GraphicsConfiguration
+        // pour ramener le clic en pixels physiques avant l'inverse-transform.
+        double deviceScale = 1.0;
+        if (this.getGraphicsConfiguration() != null) {
+            AffineTransform deviceTransform =
+                    this.getGraphicsConfiguration().getDefaultTransform();
+            deviceScale = deviceTransform.getScaleX(); // scaleX == scaleY en pratique
+        }
+ 
+        // Mise à l'échelle du point de clic vers les coordonnées physiques
+        java.awt.Point rawPoint = event.getPoint();
+        Point2D scaledPoint = new Point2D.Double(
+                rawPoint.x * deviceScale,
+                rawPoint.y * deviceScale);
+ 
         // Get the point using the inverse transform of the Zoom/Pan object, this gives
-        // us
-        // a point within the drawing box (between [0, 0] and [width, height]).
+        // us a point within the drawing box (between [0, 0] and [width, height]).
         Point2D ptDst = this.zoomAndPanListener.getCoordTransform()
-                .inverseTransform(event.getPoint(), null);
-
+                .inverseTransform(scaledPoint, null);
+ 
         // Inverse the "projection" on x/y to get longitude and latitude.
         return new Point(projection.pixelXToLongitude(ptDst.getX()),
                 projection.pixelYToLatitude(ptDst.getY()));
     }
-
+ 
     /*
      * (non-Javadoc)
      *
@@ -537,7 +553,7 @@ public class BasicDrawing extends JPanel implements Drawing {
     public void addDrawingClickListener(DrawingClickListener listener) {
         this.drawingClickListeners.add(listener);
     }
-
+ 
     /*
      * (non-Javadoc)
      *
@@ -548,31 +564,31 @@ public class BasicDrawing extends JPanel implements Drawing {
     public void removeDrawingClickListener(DrawingClickListener listener) {
         this.drawingClickListeners.remove(listener);
     }
-
+ 
     public BasicMarkerOverlay createMarker(Point point, Color outer, Color inner,
             AlphaMode mode) {
         return new BasicMarkerOverlay(point, outer, inner, mode);
     }
-
+ 
     @Override
     public MarkerOverlay drawMarker(Point point, Color outer, Color inner,
             AlphaMode mode) {
         return (MarkerOverlay) this.overlays
                 .add(createMarker(point, outer, inner, mode));
     }
-
+ 
     @Override
     public PointSetOverlay createPointSetOverlay() {
         return (PointSetOverlay) this.overlays.add(new BasicPointSetOverlay(), false);
     }
-
+ 
     @Override
     public PointSetOverlay createPointSetOverlay(int width, Color color) {
         PointSetOverlay ps = createPointSetOverlay();
         ps.setWidthAndColor(width, color);
         return ps;
     }
-
+ 
     /**
      * Draw the given arc.
      *
@@ -592,12 +608,12 @@ public class BasicDrawing extends JPanel implements Drawing {
             Point prev = it1.next();
             while (it1.hasNext()) {
                 Point curr = it1.next();
-
+ 
                 int x1 = projection.longitudeToPixelX(prev.getLongitude());
                 int x2 = projection.longitudeToPixelX(curr.getLongitude());
                 int y1 = projection.latitudeToPixelY(prev.getLatitude());
                 int y2 = projection.latitudeToPixelY(curr.getLatitude());
-
+ 
                 graphGraphics.drawLine(x1, y1, x2, y2);
                 prev = curr;
             }
@@ -606,32 +622,32 @@ public class BasicDrawing extends JPanel implements Drawing {
             this.repaint();
         }
     }
-
+ 
     /**
      * Initialize the drawing for the given graph.
      *
      * @param graph
      */
     protected void initialize(Graph graph) {
-
+ 
         // Clear everything.
         this.clear();
-
+ 
         BoundingBox box = graph.getGraphInformation().getBoundingBox();
-
+ 
         // Find minimum/maximum longitude and latitude.
         float minLon = box.getTopLeftPoint().getLongitude(),
                 maxLon = box.getBottomRightPoint().getLongitude(),
                 minLat = box.getBottomRightPoint().getLatitude(),
                 maxLat = box.getTopLeftPoint().getLatitude();
-
+ 
         // Add a little delta to avoid drawing on the edge...
         float diffLon = maxLon - minLon, diffLat = maxLat - minLat;
         float deltaLon = 0.01f * diffLon, deltaLat = 0.01f * diffLat;
-
+ 
         // Create the projection and retrieve width and height for the box.
         BoundingBox extendedBox = box.extend(deltaLon, deltaLat, deltaLon, deltaLat);
-
+ 
         // Special projection for non-realistic maps...
         if (graph.getMapId().startsWith("0x")) {
             projection =
@@ -642,7 +658,7 @@ public class BasicDrawing extends JPanel implements Drawing {
         }
         this.width = (int) projection.getImageWidth();
         this.height = (int) projection.getImageHeight();
-
+ 
         // Create the image
         BufferedImage img = new BufferedImage(this.width, this.height,
                 BufferedImage.TYPE_3BYTE_BGR);
@@ -650,12 +666,12 @@ public class BasicDrawing extends JPanel implements Drawing {
         this.graphGraphics = img.createGraphics();
         this.graphGraphics.setBackground(this.getBackground());
         this.graphGraphics.clearRect(0, 0, this.width, this.height);
-
+ 
         // Set the zoom and pan listener
-
+ 
         double scale = 1 / Math.max(this.width / (double) this.getWidth(),
                 this.height / (double) this.getHeight());
-
+ 
         this.zoomAndPanListener.setCoordTransform(this.graphGraphics.getTransform());
         this.zoomAndPanListener.getCoordTransform().translate(
                 (this.getWidth() - this.width * scale) / 2,
@@ -663,24 +679,24 @@ public class BasicDrawing extends JPanel implements Drawing {
         this.zoomAndPanListener.getCoordTransform().scale(scale, scale);
         this.zoomAndPanListener.setZoomLevel(0);
         this.zoomControls.setZoomLevel(0);
-
+ 
         // Repaint
         this.repaint();
     }
-
+ 
     @Override
     public void drawGraph(Graph graph, GraphPalette palette) {
         int repaintModulo = Math.max(1, graph.size() / 100);
-
+ 
         // Initialize the buffered image
-
+ 
         this.initialize(graph);
-
+ 
         // Remove zoom and pan listener
         this.removeMouseListener(zoomAndPanListener);
         this.removeMouseMotionListener(zoomAndPanListener);
         this.removeMouseWheelListener(zoomAndPanListener);
-
+ 
         for (Node node : graph.getNodes()) {
             for (Arc arc : node.getSuccessors()) {
                 // Draw arcs only if there are one-way arcs or if origin is lower than
@@ -695,18 +711,18 @@ public class BasicDrawing extends JPanel implements Drawing {
             }
         }
         this.repaint();
-
+ 
         // Re-add zoom and pan listener
         this.addMouseListener(zoomAndPanListener);
         this.addMouseMotionListener(zoomAndPanListener);
         this.addMouseWheelListener(zoomAndPanListener);
     }
-
+ 
     @Override
     public void drawGraph(Graph graph) {
         drawGraph(graph, DEFAULT_PALETTE);
     }
-
+ 
     @Override
     public PathOverlay drawPath(Path path, Color color, boolean markers) {
         List<Point> points = new ArrayList<Point>();
@@ -731,20 +747,20 @@ public class BasicDrawing extends JPanel implements Drawing {
         return (PathOverlay) this.overlays
                 .add(new BasicPathOverlay(points, color, origin, destination));
     }
-
+ 
     @Override
     public PathOverlay drawPath(Path path, Color color) {
         return drawPath(path, color, true);
     }
-
+ 
     @Override
     public PathOverlay drawPath(Path path) {
         return drawPath(path, DEFAULT_PATH_COLOR);
     }
-
+ 
     @Override
     public PathOverlay drawPath(Path path, boolean markers) {
         return drawPath(path, DEFAULT_PATH_COLOR, markers);
     }
-
+ 
 }

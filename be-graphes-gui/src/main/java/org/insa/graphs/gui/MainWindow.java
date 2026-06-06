@@ -61,6 +61,8 @@ import org.insa.graphs.gui.drawing.Drawing;
 import org.insa.graphs.gui.drawing.GraphPalette;
 import org.insa.graphs.gui.drawing.components.BasicDrawing;
 import org.insa.graphs.gui.drawing.components.MapViewDrawing;
+import org.insa.graphs.algorithm.shortestpath.AStarAlgorithm;
+import org.insa.graphs.gui.observers.AStarGraphicObserver;
 import org.insa.graphs.gui.observers.ShortestPathGraphicObserver;
 import org.insa.graphs.gui.observers.WeaklyConnectedComponentGraphicObserver;
 import org.insa.graphs.gui.utils.FileUtils;
@@ -109,6 +111,9 @@ public class MainWindow extends JFrame {
     // Algorithm panels
     private final List<AlgorithmPanel> algoPanels = new ArrayList<>();
     private final AlgorithmPanel wccPanel, spPanel, cpPanel, psPanel;
+
+    // Panel Marathon (custom, hors AlgorithmPanel)
+    private final MarathonPanel marathonPanel;
 
     // Path panel
     private final PathsPanel pathPanel;
@@ -231,7 +236,12 @@ public class MainWindow extends JFrame {
                 spPanel.setEnabled(false);
 
                 if (evt.isGraphicVisualizationEnabled()) {
-                    spAlgorithm.addObserver(new ShortestPathGraphicObserver(drawing));
+                    // Couleur différente selon l'algo : orange/rouge pour A*, cyan/bleu pour Dijkstra
+                    if (AStarAlgorithm.class.isAssignableFrom(evt.getAlgorithmClass())) {
+                        spAlgorithm.addObserver(new AStarGraphicObserver(drawing));
+                    } else {
+                        spAlgorithm.addObserver(new ShortestPathGraphicObserver(drawing));
+                    }
                 }
                 if (evt.isTextualVisualizationEnabled()) {
                     spAlgorithm.addObserver(new ShortestPathTextObserver(printStream));
@@ -275,6 +285,14 @@ public class MainWindow extends JFrame {
         algoPanels.add(psPanel);
 
         this.pathPanel = new PathsPanel(this);
+
+        // --- Panel Marathon (après pathPanel car le listener l'utilise) ---
+        marathonPanel = new MarathonPanel(this);
+        marathonPanel.addRunListener(e -> {
+            if (e.getSource() instanceof org.insa.graphs.model.Path) {
+                pathPanel.addPath((org.insa.graphs.model.Path) e.getSource());
+            }
+        });
 
         // Add click listeners to both drawing.
 
@@ -374,6 +392,10 @@ public class MainWindow extends JFrame {
             rightComponent.add(panel, c);
         }
 
+        // Marathon panel (custom)
+        marathonPanel.setVisible(false);
+        rightComponent.add(marathonPanel, c);
+
         c = new GridBagConstraints();
         c.gridx = 0;
         c.gridy = 2;
@@ -440,6 +462,7 @@ public class MainWindow extends JFrame {
         for (GraphChangeListener listener : graphChangeListeneres) {
             listener.newGraphLoaded(graph);
         }
+        marathonPanel.setGraph(graph);
     }
 
     /**
@@ -452,6 +475,12 @@ public class MainWindow extends JFrame {
         for (DrawingChangeListener listener : drawingChangeListeners) {
             listener.onDrawingLoaded(oldDrawing, newDrawing);
         }
+        // Désenregistrer l'ancien drawing, enregistrer le nouveau
+        if (oldDrawing != null) {
+            oldDrawing.removeDrawingClickListener(marathonPanel);
+        }
+        newDrawing.addDrawingClickListener(marathonPanel);
+        marathonPanel.setDrawing(newDrawing);
     }
 
     /**
@@ -642,6 +671,19 @@ public class MainWindow extends JFrame {
         for (AlgorithmPanel panel : algoPanels) {
             panel.setVisible(panel == algorithmPanel);
         }
+        marathonPanel.setVisible(false);
+        mainPanel.setDividerLocation(dividerLocation);
+    }
+
+    /**
+     * Show the Marathon panel and hide all algorithm panels.
+     */
+    private void enableMarathonPanel() {
+        int dividerLocation = mainPanel.getDividerLocation();
+        for (AlgorithmPanel panel : algoPanels) {
+            panel.setVisible(false);
+        }
+        marathonPanel.setVisible(true);
         mainPanel.setDividerLocation(dividerLocation);
     }
 
@@ -786,16 +828,28 @@ public class MainWindow extends JFrame {
             }
         }));
 
+        // Marathon
+        JMenuItem marathonItem = new JMenuItem("Marathon");
+        marathonItem.addActionListener(baf.createBlockingAction(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                enableMarathonPanel();
+            }
+        }));
+
         graphLockItems.add(wccItem);
         graphLockItems.add(spItem);
         graphLockItems.add(cpItem);
         graphLockItems.add(psItem);
+        graphLockItems.add(marathonItem);
 
         algoMenu.add(wccItem);
         algoMenu.addSeparator();
         algoMenu.add(spItem);
         algoMenu.add(cpItem);
         algoMenu.add(psItem);
+        algoMenu.addSeparator();
+        algoMenu.add(marathonItem);
 
         // Create the menu bar.
         JMenuBar menuBar = new JMenuBar();
