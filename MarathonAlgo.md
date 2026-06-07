@@ -2,7 +2,7 @@ sujet choisi : Le marathon
 
 Contrainte : 
 - a partir d'un point de départ, faire un parcour en forme de boucle 
-- le parcours doit faire L km avec un incertitdue de 1% 
+- le parcours doit faire L km
 - on ne doit pas reppaser par les même chemin 
 
 solution envisagé : 
@@ -28,7 +28,7 @@ Sorite :
 // initialisation 
 
 SommetDepart[N]
-SommetDepart[0]
+SommetDepart[0] = S0
 SommetAdmissible < - liste vide  //List des somment admissible 
 SommetArriver = NULL
 SommetUsed <- Ensemble vide
@@ -95,3 +95,7 @@ pour chaque Arc arc depuis SommetCourant :
     Si arc appartient à  ArcsInterdits :
         continuer   
 ...
+
+
+
+
